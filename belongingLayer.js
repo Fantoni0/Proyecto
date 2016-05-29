@@ -45,20 +45,17 @@ repSocket.on('message',function(data){
 		};
 		count++;
 		repSocket.send(JSON.stringify(res));
+	}else if(msg.text=='Force failover'){
+		//Primary is dead. Long live to the primary.
+		servers.splice(1,1); //Delete primary
+		var msg = {
+			idPrimary: servers[0].id,
+			subPriAd: servers[0].pubAd,
+			subPriPo: servers[0].pubPo
+		};
+		pubSocket.send(JSON.stringify(msg));
 	}
 });
-
-//Primary is dead. Long live to the primary.
-setInterval(function(){
-	//Simulate primary failover and force
-	servers.splice(1,1); //Delete primary
-	var msg = {
-		idPrimary: servers[0].id,
-		subPriAd: servers[0].pubAd,
-		subPriPo: servers[0].pubPo
-	};
-	pubSocket.send(JSON.stringify(msg));
-},10000);
 
 
 

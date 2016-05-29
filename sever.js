@@ -100,7 +100,7 @@ var processUpdate = function(msg){
     var response;
     var request = JSON.parse(msg);
     var kind = request.kind;
-    console.log("Got request from client "+request.clientId);
+    console.log("Client "+request.clientId+" requested a "+kind+"operation");
     if(kind == 'get'){
         response = {
             primaryId : id,
@@ -109,20 +109,15 @@ var processUpdate = function(msg){
             item: shop[searchItem(request.ref_number)]
         };
     }
-    if(kind == 'create'){
-        shop.push({
-            ref_number:request.ref_number,
-            name:request.name,
-            quantity:request.quantity,
-            price: request.price
-        });
+    if(kind == 'getAll'){
         response ={
             primaryId : id,
             kind: kind,
-            result: 'positive'
+            result: 'positive',
+            item: shop
         };
     }
-    if(kind == 'delete'){
+    if(kind == 'buy'){
         var index = searchItem(request.ref_number);
         if(index==-1){
             response ={
@@ -130,29 +125,36 @@ var processUpdate = function(msg){
                 kind: kind,
                 result: 'negative'
                 cause: 'Item not found'
+            };
+        else if(request.quantity>shop[index].quantity){
+            response ={
+                primaryId : id,
+                kind: kind,
+                result: 'negative'
+                cause: 'There is not enough stock'
             };
         }else{
             //splice
+            shop[index].quantity-=request.quantity;
             response ={
                 primaryId : id,
                 kind: kind,
-                result: 'positive'
+                result: 'positive',
+                item: {quantity:request.quantity,item:shop[index]}
             };
         }
     }
-    if(kind == 'ùpdate'){
+    if(kind == 'return'){
         var index = searchItem(request.ref_number);
         if(index==-1){
             response ={
                 primaryId : id,
                 kind: kind,
-                result: 'negative'
+                result: 'negative',
                 cause: 'Item not found'
             };
         }else{
-            if(request.property == 'name') shop[index].name = request.value;
-            if(request.property == 'quantity')shop[index].quantity = request.value;
-            if(request.property == 'price')shop[index].price = request.value;
+            shop[index].quantity+=request.quantity;
             response ={
                 primaryId : id,
                 kind: kind,

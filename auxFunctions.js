@@ -42,45 +42,34 @@ var getShop = function(){
 	return shop;
 };
 
-var randomRequest = function(id){
+var randomRequest = function(id,refNum){
 	var request, kind, prop;
-	var shopLength = getShop().length-1;
-	var query = ['get','update','create','delete'];
-	var property = ['name','quantity','price'];
+	var query = ['get','getAll','buy','return'];
 	kind = query[randInteger(query.length-1,0)];
 	if(kind == 'get'){
 		request = {
 			clientId: id,
 			kind: kind,
-			ref_number: randInteger(shopLength,0)
+			ref_number: refNum
 		};
-	}else if(kind == 'update'){
-		var aux;
-		prop = property[randInteger(property.length-1,0)];
-		if(prop =='name') aux = randString();
-		if(prop =='quantity') aux = randInteger(10,1);
-		if(prop =='price') aux = randReal(5,1);
+	}else if(kind == 'getAll'){
+		request = {
+			clientId: id,
+			kind: kind
+		};
+	}else if(kind == 'buy'){
 		request = {
 			clientId: id,
 			kind: kind,
-			ref_number: randInteger(shopLength,0),
-			property: prop,
-			value: aux
+			ref_number: refNum,
+			quantity: randInteger(20,2)
 		};
-	}else if(kind == 'create'){
+	}else if(kind == 'return'){
 		request = {
 			clientId: id,
 			kind: kind,
-			ref_number: shopLength+1,
-			name: randString(),
-			quantity: randInteger(20,5),
-			price: randReal(15,5)
-		};
-	}else if(kind == 'delete'){
-		request = {
-			clientId: id,
-			kind: kind,
-			ref_number: randInteger(shopLength,0)
+			ref_number: refNum,
+			quantity: randInteger(20,2)
 		};
 	}else{
 		console.log("Invalid request");
