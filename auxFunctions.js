@@ -1,12 +1,13 @@
 //Auxiliar functions
+module.exports={
 
-var errorBinding = function(err, msg){
+errorBinding: function(err, msg){
     if(err){
         console.log("Error binding "+msg+ " socket.");
     }else{console.log("Socket "+msg+" is up and ready");}
-};
+},
 
-var getShop = function(){
+getShop: function(){
 	var shop = [
 	{
 		ref_number:1,
@@ -40,12 +41,12 @@ var getShop = function(){
 	},
 	];
 	return shop;
-};
+},
 
-var randomRequest = function(id,refNum){
+randomRequest : function(id,refNum){
 	var request, kind, prop;
 	var query = ['get','getAll','buy','return'];
-	kind = query[randInteger(query.length-1,0)];
+	kind = query[this.randInteger(query.length-1,0)];
 	if(kind == 'get'){
 		request = {
 			clientId: id,
@@ -62,33 +63,32 @@ var randomRequest = function(id,refNum){
 			clientId: id,
 			kind: kind,
 			ref_number: refNum,
-			quantity: randInteger(20,2)
+			quantity: this.randInteger(20,2)
 		};
 	}else if(kind == 'return'){
 		request = {
 			clientId: id,
 			kind: kind,
 			ref_number: refNum,
-			quantity: randInteger(20,2)
+			quantity: this.randInteger(20,2)
 		};
 	}else{
 		console.log("Invalid request");
 		process.exit(0);
 	}
 	return JSON.stringify(request);
-};
+},
 
-var randInteger = function(upper,lower){
+randInteger :function(upper,lower){
 	var num = Math.abs(Math.round(Math.random()*upper));
 	return num +(lower || 0);
-};
-
-var randReal = function(upper,lower){
+},
+randReal : function(upper,lower){
 	var num = Math.abs(Math.random()*upper);
 	return num +(lower || 0);
-};
+},
 
-var randString = function(){
+randString : function(){
 	var len = 5
 	, charSet = 'abcdefghijklmnopqrstuvvwxyz'
 	, result = [];
@@ -97,4 +97,5 @@ var randString = function(){
 	}
 	//result.splice(len / 2, 0, ['-']);
 	return result.join('');
+}
 };

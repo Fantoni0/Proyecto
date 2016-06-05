@@ -2,7 +2,7 @@
 
 //Import packages
 var zmq = require('zmq');
-var aux = require('./auxFunctions.js');
+var aux = require('./auxFunctions');
 
 //Variables
 var count = 1;
@@ -13,16 +13,20 @@ var repSocketAddress,repSocketPort,pubSocketAddress,pubSocketPort;
 
 //Get arguments
 var arg = process.argv;
-if(arg.lenght<5){
+if(arg.length<5){
 	console.log("Incorrect number of arguments.Expected format:\n \
-		nodejs belongingLayer.js <repSocketAddress> <repSocketPort> <pubSocketAddress> <pubSocketPort>");
+		node belongingLayer.js <repSocketAddress> <repSocketPort> <pubSocketAddress> <pubSocketPort>");
 }
+repSocketAddress = arg[2];
+repSocketPort =  arg[3];
+pubSocketAddress =  arg[4];
+pubSocketPort =  arg[5];
 
 //Create and bind sockets
 repSocket = zmq.socket('rep');
 pubSocket = zmq.socket('pub');
-repSocket.bindSync('tcp://'+repSocketAddress+":"+repSocketPort,aux.errorBinding(err,'REP'));
-pubSocket.bindSync('tcp://'+pubSocketAddress+":"+pubSocketPort,aux.errorBinding(err,'PUB'));
+repSocket.bindSync('tcp://'+repSocketAddress+':'+repSocketPort);
+pubSocket.bindSync('tcp://'+pubSocketAddress+':'+pubSocketPort);
 
 //Registering new servers
 repSocket.on('message',function(data){
@@ -37,7 +41,7 @@ repSocket.on('message',function(data){
 		//Crafting response
 		var res = {
 			idServer: count,
-			isPrimary: (servers.lenght==1),
+			isPrimary: servers.length==1,
 			subPriAd: servers[0].pubAd,
 			subPriPo: servers[0].pubPo,
 			subLayAd: pubSocketAddress,
@@ -47,6 +51,7 @@ repSocket.on('message',function(data){
 		repSocket.send(JSON.stringify(res));
 	}else if(msg.text=='Force failover'){
 		//Primary is dead. Long live to the primary.
+		console.log("**Primary is dead. New election is comming**\n");
 		servers.splice(1,1); //Delete primary
 		var msg = {
 			idPrimary: servers[0].id,
@@ -55,9 +60,5 @@ repSocket.on('message',function(data){
 		};
 		pubSocket.send(JSON.stringify(msg));
 	}
+
 });
-
-
-
-
-
