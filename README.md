@@ -13,3 +13,7 @@ As part of my work I am developing a demo to show my updating algorithm in actio
 - client.js: Simple client to interact with servers. 
 
 - server.js:  The real thing. The back-ups. One acts as a primary and the rest as back-up. 
+
+- failover.js: Simple piece of code to start the simulation of primary's failover.
+
+-launcher.sh: Script to launch the demo
