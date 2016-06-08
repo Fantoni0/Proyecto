@@ -16,4 +16,4 @@ As part of my work I am developing a demo to show my updating algorithm in actio
 
 - failover.js: Simple piece of code to start the simulation of primary's failover.
 
--launcher.sh: Script to launch the demo
+- launcher.sh: Script to launch the demo

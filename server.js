@@ -49,7 +49,9 @@ var initialMsg = JSON.stringify({
     text: "I am a new Server",
     service: service,
     pubAd: pubSocketAddress,
-    pubPo: pubSocketPort
+    pubPo: pubSocketPort,
+    repAd: repSocketAddress,
+    repPo: repSocketPort
 });
 reqSocket.send(initialMsg);
 
@@ -74,18 +76,24 @@ reqSocket.on('message',function(msg){
 //Listening to belonging layer updates
 subBelongingSocket.on('message',function(msg){
     //If a message is received the primary is down and a reconfiguration is needed.
-    console.log("Got belonging layer update layer");
     var update = JSON.parse(msg);
-    if(isPrimary && update.idPrimary!=id)process.exit(0);
-    if(update.idPrimary==id){
-        isPrimary = true;
-        repSocket.bindSync('tcp://'+repSocketAddress+":"+repSocketPort);
-        subPrimarySocket.close();
-    }else{
-        subPrimarySocket.close();
-        subPrimarySocket = zmq.socket('sub');
-        subPrimarySocket.connect('tcp://'+update.subPriAd+":"+update.subPriPo );
-        subPrimarySocket.subscribe('');
+    if(update.kind=='newPrimary'){
+        if(isPrimary && update.idPrimary!=id)process.exit(0);
+        if(update.idPrimary==id){
+            isPrimary = true;
+            repSocket.bindSync('tcp://'+repSocketAddress+":"+repSocketPort);
+            subPrimarySocket.close();
+        }else{
+            subPrimarySocket.close();
+            subPrimarySocket = zmq.socket('sub');
+            subPrimarySocket.connect('tcp://'+update.subPriAd+":"+update.subPriPo );
+            subPrimarySocket.subscribe('');
+        }
+    }else if(update.kind=='Sepukku'){
+        if(id==update.idServer){
+            console.log("Server" +id+" has been shut down. I have dishonored my service. I should kill myself.");
+            process.exit(0);
+        }
     }
 });
 
@@ -117,7 +125,7 @@ var processUpdate = function(msg){
             item: shop[searchItem(request.ref_number)]
         };
     }
-    if(kind == 'getAll'){
+    else if(kind == 'getAll'){
         response ={
             primaryId : id,
             kind: kind,
@@ -125,7 +133,7 @@ var processUpdate = function(msg){
             item: shop
         };
     }
-    if(kind == 'buy'){
+    else if(kind == 'buy'){
         var index = searchItem(request.ref_number);
         if(index==-1){
             response ={
@@ -152,7 +160,7 @@ var processUpdate = function(msg){
             };
         }
     }
-    if(kind == 'return'){
+    else if(kind == 'return'){
         var index = searchItem(request.ref_number);
         if(index==-1){
             response ={
@@ -169,6 +177,23 @@ var processUpdate = function(msg){
                 result: 'positive'
             };
         }
+    }
+    else if(kind == 'create'){
+        shop.push(request.item);
+        response ={
+                primaryId : id,
+                kind: kind,
+                result: 'positive'
+        };
+    }
+    else if(kind == 'delete'){
+        var index = searchItem(request.ref_number);
+        shop.splice(index,1);
+        response ={
+                primaryId : id,
+                kind: kind,
+                result: 'positive'
+        };
     }
     return response;
 }
