@@ -41,6 +41,7 @@ pubSocket = zmq.socket('pub')
 subPrimarySocket = zmq.socket('sub')
 subBelongingSocket = zmq.socket('sub');
 
+console.log("THIS MAY BE FORKED");
 //Connecting pub socket to broadcast updates
 pubSocket.bindSync('tcp://'+pubSocketAddress+":"+pubSocketPort);
 //Initial request to check if I am the primary.
@@ -154,7 +155,7 @@ var processRequest = function(request){
                 primaryId : id,
                 kind: kind,
                 result: 'positive',
-                item: shop[0] //On purpose error
+                item: shop[searchItem(request.ref_number)]
             };
             break;
         case 'getAll':

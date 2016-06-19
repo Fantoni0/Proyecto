@@ -33,13 +33,16 @@ if(idToShutDown==undefined){
 }else{ id = idToShutDown;}
 var fail = {
 	text: 'Force failover',
-	service: this.service,
+	service: service,
 	serverId: id
 }
-console.log(fail);
-//reqSocket.send(JSON.stringify(fail));
+reqSocket.send(JSON.stringify(fail));
 
 reqSocket.on('message', function(reply){
-	console.log('Failover message was received');
+	if(reply == "Failover started"){
+		console.log('Failover message was received');
+	}else{
+		console.log('Incorrect server Id was provided, try again.');
+	}
 	process.exit(0);
 })

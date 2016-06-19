@@ -23,6 +23,8 @@ service = arg[3].toString();
 reqDomainNameAddress = arg[4].toString();
 reqDomainNamePort = arg[5].toString();
 
+
+
 //Create and connect sockets
 reqSocket = zmq.socket('req');
 reqSocketDN = zmq.socket('req');
@@ -37,15 +39,24 @@ reqSocketDN.send(JSON.stringify(request));
 
 reqSocketDN.on('message', function(reply){
     var message = JSON.parse(reply);
-    reqSocketAddress = message.Address;
-    reqSocketPort = message.Port;
-    reqSocket.connect('tcp://'+reqSocketAddress+':'+reqSocketPort);
-    //Now we got primary's address. Let's get service's catalog
-    var initialRequest = {
-        clientId: id,
-        kind: "getAll"
-    }
-    reqSocket.send(JSON.stringify(initialRequest));    
+    if(message.result == "positive"){
+	    reqSocketAddress = message.item.address;
+	    reqSocketPort = message.item.port;
+	    reqSocket.connect('tcp://'+reqSocketAddress+':'+reqSocketPort);
+	    //Now we got primary's address. Let's get service's catalog
+	    var initialRequest = {
+	        clientId: id,
+	        kind: "getAll"
+	    }
+	    reqSocket.send(JSON.stringify(initialRequest));    
+	}else{
+		//Get primary's address by asking the DNS
+		var request = {
+		    kind: "Consult",
+		    service : service
+		};
+		reqSocketDN.send(JSON.stringify(request));
+	}
 });
 
 reqSocket.on('message',function(reply){
@@ -62,10 +73,10 @@ reqSocket.on('message',function(reply){
 	    	changeShop = {
 	    		kind: "create",
 	    		item: {
-	    			ref_number:this.getFreeRefNumber(shop),
+	    			ref_number:getFreeRefNumber(shop),
 	    			name:aux.randString(),
-	    			quantity: randInteger(answer.id*7,5),
-	    			price: randReal(answer.id*10,5)
+	    			quantity: aux.randInteger(answer.primaryId*7,5),
+	    			price: aux.randReal(answer.primaryId*10,5).toFixed(2)
 	    		}
 	    	}
 	    }
@@ -73,20 +84,24 @@ reqSocket.on('message',function(reply){
 	}else{
 		//We get the result of the create/delete operation
 		console.log("Request "+answer.kind+" had a " +answer.result+" result.");
+		if(answer.result=='negative'){
+			console.log("The reason was: "+answer.cause);
+		}
 	}
 });
 
+//Aux functions
 var getFreeRefNumber = function(arr){
-	arr.sort(this.compare);
-	return arr[arr.length-1].ref_number+1;
+    arr.sort(this.compare);
+    return arr[arr.length-1].ref_number+1;
 };
 
 var compare = function(a,b){
-	if(a.ref_number<b.ref_number){
-		return -1;
-	}else if(a.ref_number>b.ref_number){
-		return 1;
-	}else{
-		return 0;
-	}
-}
+    if(a.ref_number<b.ref_number){
+        return -1;
+    }else if(a.ref_number>b.ref_number){
+        return 1;
+    }else{
+        return 0;
+    }
+};
