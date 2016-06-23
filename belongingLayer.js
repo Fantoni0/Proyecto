@@ -13,6 +13,8 @@ var repSocketAddress,repSocketPort,pubSocketAddress,pubSocketPort;
 var reqSocketDN, reqDomainNameAddress, reqDomainNamePort;
 var lastTransferedState, transformedState;
 
+var shop = aux.getShop();
+
 //Get arguments
 var arg = process.argv;
 if(arg.length<8){
@@ -30,6 +32,8 @@ reqDomainNamePort = arg[7].toString();
 //Create and bind sockets
 repSocket = zmq.socket('rep');
 pubSocket = zmq.socket('pub');
+subSocket = zmq.socket('sub');
+
 reqSocketDN = zmq.socket('req');
 repSocket.bindSync('tcp://'+repSocketAddress+':'+repSocketPort);
 pubSocket.bindSync('tcp://'+pubSocketAddress+':'+pubSocketPort);
@@ -42,8 +46,8 @@ repSocket.on('message',function(data){
 		case "I am a new server":
 			if(services[msg.service]==undefined){
 				services[msg.service]=[];
-				servers = services[msg.service];
 			}
+			servers = services[msg.service];
 			//Registering server configuration.
 			servers.push({id:count,pubAd:msg.pubAd,pubPo:msg.pubPo,repAd:msg.repAd,repPo:msg.repPo});
 			//Crafting response
@@ -54,7 +58,7 @@ repSocket.on('message',function(data){
 				subPriPo: servers[0].pubPo,
 				subLayAd: pubSocketAddress,
 				subLayPo: pubSocketPort,
-				state: transformedState                                  
+				state: shop                                  
 			};
 			if(res.isPrimary==true){
 				//Communicate DNS new primary's address
@@ -66,6 +70,8 @@ repSocket.on('message',function(data){
 					port:servers[0].repPo
 				};
 				reqSocketDN.send(JSON.stringify(commMsg));
+				subSocket.connect('tcp://'+servers[0].pubAd+':'+servers[0].pubPo);
+				subSocket.subscribe('');
 			}
 			count++;
 			repSocket.send(JSON.stringify(res));
@@ -79,16 +85,17 @@ repSocket.on('message',function(data){
 			var failover = false;
 			var fork = require('child_process').fork;
 			var child;
-			while(numReplicasUpdated<numReplicas-1){
+			repSocket.send("Started algortihm");
+			child = fork(msg.fileName,[msg.service, 2.0, '127.0.0.1', 6040+numReplicasUpdated, '127.0.0.1', 5000, '127.0.0.1', 6060+numReplicasUpdated]);
+			numReplicasUpdated++;
+			while(numReplicasUpdated<numReplicas){
 				//Kill old replica
 				var killRep = {
 					kind: "Sepukku",
 					idServer: servers[1].id
 				}
 				pubSocket.send(JSON.stringify(killRep));
-				console.log(servers);
 				servers.splice(1,1); //Delete server
-				console.log(servers);
 				//Compute state transformation (if needed)
 				if(transformedState==undefined){
 					//Transform state
@@ -96,23 +103,22 @@ repSocket.on('message',function(data){
 					transformedState = lastTransferedState;
 				}
 				//Launch new replica
-				//child = exec('node'+ msg.fileName +' '+ msg.service+' 2.0 127.0.0.1 '+(6040+count)+' 127.0.0.1 5000 127.0.0.1 '+(6060+count)+' &');
-				//child = spawn('node',[msg.fileName, msg.service, 2.0, '127.0.0.1', 6040+count, '127.0.0.1', 5000, '127.0.0.1', 6060+count]);
-				child = fork(msg.fileName,[msg.fileName, msg.service, 2.0, '127.0.0.1', 6040+numReplicasUpdated, '127.0.0.1', 5000, '127.0.0.1', 6060+numReplicasUpdated]);
+				child = fork(msg.fileName,[msg.service, 2.0, '127.0.0.1', 6040+numReplicasUpdated, '127.0.0.1', 5000, '127.0.0.1', 6060+numReplicasUpdated]);
 				numReplicasUpdated++;
 				//Fallo de réplica nueva
 				//Fallo del primario
 			}
-			if(!failover){
+			//Wait for new servers to register
+			setTimeout(function(){
+				if(!failover){
 				//Force primary to fail to select new replica
 				failover=true;
 				forcePrimaryfailover(msg.service,0);
 			}
-			transformedState = undefined;
-			break;
-		case "State transfer":
-			//var index  = searchServerIndex(msg.id);
-			lastTransferedState = msg.state;
+			},1000);
+			//transformedState = undefined;
+			//Gestionar la actualizacion haciendo que la capa de pertenencia sea consciente del estado y actualice su estado cada 
+			//vez que el primario se lo dice. Como si fuera una replica más.
 			break;
 	}
 	
@@ -135,6 +141,11 @@ reqSocketDN.on('message',function(reply){
 	}
 });
 
+//Processins state updates
+subSocket.on('message',function(msg){
+	processUpdate(msg);
+});
+
 //Functions
 var searchServerIndex = function(id){
 	for(i = 0;i<servers.length;i++){
@@ -143,7 +154,29 @@ var searchServerIndex = function(id){
 	return -1;
 };
 
+var processUpdate = function(update){
+    var msg = JSON.parse(update);
+    switch(msg.kind){
+        case 'buy':
+            shop[msg.position].quantity-=msg.quantity;
+            break;
+        case 'return':
+            shop[msg.position].quantity+=msg.quantity;
+            break;
+        case 'create':
+            shop.push(msg.item);
+            break;
+        case 'delete':
+            shop.splice(msg.position,1);
+            break;
+    }
+}
+
 var forcePrimaryfailover = function(service,id){
+	if(servers.length<=1){
+		console.log("Just one server remaining, can't force failure");
+		return;
+	}
 	if(id==0){
 		console.log("**Primary is dead. New election is comming**\n");			
 		servers.splice(0,1); //Delete primary			
@@ -155,6 +188,11 @@ var forcePrimaryfailover = function(service,id){
 			subPriPo: servers[0].pubPo
 		};
 		pubSocket.send(JSON.stringify(notify));
+		//Reconfigure own subSocket
+		subSocket.close();
+		subSocket = zmq.socket('sub');
+		subSocket.connect('tcp://'+servers[0].pubAd+':'+servers[0].pubPo);
+		subSocket.subscribe('');
 		//Notify DNS
 		commMsg = {
 			kind : "Register",

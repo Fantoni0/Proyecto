@@ -46,12 +46,12 @@ repSocket.on('message',function(request){
 				item:services[message.service],
 				service: message.service
 				};
-			repSocket.send(JSON.stringify(answer));
 		}else{
 			answer = {
 				result:"negative",
 				service: message.service
 			};
 		}
+		repSocket.send(JSON.stringify(answer));
 	}
 });

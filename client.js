@@ -20,7 +20,6 @@ listener = function(reply){
         console.log("-->Failed to accomplish request due to "+res.cause);
     }
     if(res.kind=='getAll'){
-        console.log("-->Client "+id+" updated catalog")
         isReady = true;
         shop=res.item;
     }
@@ -44,7 +43,7 @@ reqDomainNamePort = arg[5].toString();
 reqSocket = zmq.socket('req');
 reqSocketDN = zmq.socket('req');
 reqSocketDN.connect('tcp://'+reqDomainNameAddress+':'+reqDomainNamePort);
-//console.log("Client "+id+ " of service "+service+" connected to "+reqDomainNameAddress+":"+reqDomainNamePort);
+
 //Get primary's address by asking the DNS
 var request = {
     kind: "Consult",
@@ -87,7 +86,7 @@ setInterval(function(){
         var msg = aux.randomRequest(id,refNum);
         reqSocket.send(msg);
         //Set timer to detect failures on the primary
-        failPrimary = setInterval(function(){
+        failPrimary = setTimeout(function(){
             //We assume the primary is dead so we have to update the socket configuration to target the new primary
             isReady = false;
             reqSocket.close();

@@ -41,7 +41,6 @@ pubSocket = zmq.socket('pub')
 subPrimarySocket = zmq.socket('sub')
 subBelongingSocket = zmq.socket('sub');
 
-console.log("THIS MAY BE FORKED");
 //Connecting pub socket to broadcast updates
 pubSocket.bindSync('tcp://'+pubSocketAddress+":"+pubSocketPort);
 //Initial request to check if I am the primary.
@@ -55,7 +54,6 @@ var initialMsg = JSON.stringify({
     repPo: repSocketPort
 });
 reqSocket.send(initialMsg);
-
  
 //Listening to belonging layer initial answer
 reqSocket.on('message',function(msg){
@@ -63,7 +61,7 @@ reqSocket.on('message',function(msg){
     id = response.idServer;
     isPrimary = response.isPrimary;
     if(response.state != undefined){
-        shop = msg.state;
+        shop = response.state;
     }
     if(!isPrimary){
         console.log("I am registered. I am the server "+id+"\n");
@@ -97,12 +95,6 @@ subBelongingSocket.on('message',function(msg){
     }else if(update.kind=='Sepukku'){
         if(id==update.idServer){ 
             console.log("Server "+id+" has been shut down.");
-            var state = {
-                text: "State transfer",
-                //id: id,
-                state: shop
-            };
-            reqSocket.send(JSON.stringify(state));
             process.exit(0);
         }
     }
