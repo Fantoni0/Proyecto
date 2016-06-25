@@ -1,7 +1,7 @@
 
 node domainName.js 127.0.0.1 5005 &
 sleep 1
-node belongingLayer.js 127.0.0.1 5000 127.0.0.1 5001 127.0.0.1 5005 &
+node updateManager.js 127.0.0.1 5000 127.0.0.1 5001 127.0.0.1 5005 &
 echo "Belonging Layer launched"
 sleep 1
 number=1
