@@ -1,7 +1,7 @@
-
+#Primary fails during update algortihm execution
 node domainName.js 127.0.0.1 5005 &
 sleep 1
-node belongingLayer.js 127.0.0.1 5000 127.0.0.1 5001 127.0.0.1 5005 &
+node updateManager.js 127.0.0.1 5000 127.0.0.1 5001 127.0.0.1 5005 &
 echo "Belonging Layer launched"
 sleep 1
 number=1
@@ -22,23 +22,8 @@ sleep 1
 node administrator.js Admin1 Prueba 127.0.0.1 5005 & 
 sleep 1
 node administrator.js Admin2 Prueba 127.0.0.1 5005 &
+sleep 1
 
-sleep 2
-node failover.js Prueba 127.0.0.1 5000 &
-
-sleep 2
-node initiateUpdate.js Prueba server3.js 127.0.0.1 5000 &
-
-sleep 2
-node administrator.js Admin3 Prueba 127.0.0.1 5005 & 
-
-sleep 2
-node failover.js Prueba 127.0.0.1 5000 &
-
-sleep 2
-node administrator.js Admin4 Prueba 127.0.0.1 5005 &
-
-
-
-
-echo "Done!"
+node initiateUpdate.js Prueba server2.js 127.0.0.1 5000 &
+sleep 1
+node failover.js Prueba 127.0.0.1 5000 7 &

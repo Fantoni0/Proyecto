@@ -24,7 +24,7 @@ reqSocketPort = arg[5].toString();
 reqSocket = zmq.socket('req');
 reqSocket.connect('tcp://'+reqSocketAddress+":"+reqSocketPort);
 
-//MANDAR NOMBREDEL NUEVO FICHERO A LANZAR!
+//Send message to request update.
 var update = {
     fileName: fileName,
 	service: service,
@@ -35,4 +35,5 @@ reqSocket.send(JSON.stringify(update));
 
 reqSocket.on('message',function(reply){
 	console.log("Updating algorithm has been started"); 
+	process.exit(0);
 });

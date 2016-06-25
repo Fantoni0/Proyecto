@@ -22,7 +22,6 @@ repSocketPort = arg[3].toString();
 //Create and connect sockets
 repSocket = zmq.socket('rep');
 repSocket.bindSync('tcp://'+repSocketAddress+':'+repSocketPort);
-console.log("Domain name service is established in "+ repSocketAddress+":"+repSocketPort);
 
 repSocket.on('message',function(request){
 	var message = JSON.parse(request);

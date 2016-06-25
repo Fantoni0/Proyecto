@@ -152,8 +152,10 @@ repSocket.on('message',function(request){
 
 reqSocketPrimary.on('message',function(reply){
     var answer = JSON.parse(reply);
-    shop = answer.item;
+    //Compute state transformation
+    shop = computeNewState(answer.item);
 });
+
 //Functions
 var processRequest = function(request){
     console.log(shop);
@@ -282,4 +284,12 @@ var searchItem = function(refNum){
     return -1;
 }
 
-
+var computeNewState = function(state){
+    for(i=0;i<state.length;i++){
+        state[i].color = aux.randString();
+        state[i].origin = aux.randString();
+        state[i].price -= state[i].price*0.1;
+        state[i].price = state[i].price.toFixed(2);
+    }
+    return state;
+}

@@ -23,8 +23,6 @@ service = arg[3].toString();
 reqDomainNameAddress = arg[4].toString();
 reqDomainNamePort = arg[5].toString();
 
-
-
 //Create and connect sockets
 reqSocket = zmq.socket('req');
 reqSocketDN = zmq.socket('req');

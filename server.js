@@ -5,17 +5,18 @@ var zmq = require('zmq');
 var aux = require('./auxFunctions');
 
 //Variables
-var service, id, version,isPrimary,shop;
-var repSocket, reqSocket, pubSocket, subPrimarySocket, subBelongingSocket;
+var service, id,isPrimary,shop;
+var repSocket, reqSocket, reqSocketPrimary, pubSocket, subPrimarySocket, subBelongingSocket;
 var repSocketAddress,repSocketPort;
 var reqSocketAddress, reqSocketPort;
 var pubSocketAddress, pubSocketPort;
+var reqSocketPrimaryAddress, reqSocketPrimaryPort;
 
 //Verifying arguments
 var arg = process.argv;
-if (arg.length<10){
+if (arg.length<9){
     console.log("Incorrect number of arguments.Expected format:\n \
-     nodejs server.js <service> <version>  <repSocketAddress> \
+     nodejs server.js <service> <repSocketAddress> \
      <repSocketPort> <reqSocketAddress> <reqSocketPort> \
      <pubSocketAddress> <pubSocketPort>");
     process.exit(0);
@@ -23,13 +24,12 @@ if (arg.length<10){
 
 //Get Arguments
 service = arg[2];
-version = arg[3];
-repSocketAddress = arg[4];
-repSocketPort = arg[5];
-reqSocketAddress = arg[6];
-reqSocketPort = arg[7];
-pubSocketAddress  = arg[8];
-pubSocketPort = arg[9];
+repSocketAddress = arg[3];
+repSocketPort = arg[4];
+reqSocketAddress = arg[5];
+reqSocketPort = arg[6];
+pubSocketAddress  = arg[7];
+pubSocketPort = arg[8];
 
 //Instanstiate shop
 shop = aux.getShop();
@@ -37,6 +37,7 @@ shop = aux.getShop();
 //Create and start sockets
 repSocket = zmq.socket('rep');
 reqSocket = zmq.socket('req');
+reqSocketPrimary = zmq.socket('req');
 pubSocket = zmq.socket('pub')
 subPrimarySocket = zmq.socket('sub')
 subBelongingSocket = zmq.socket('sub');
@@ -51,29 +52,35 @@ var initialMsg = JSON.stringify({
     pubAd: pubSocketAddress,
     pubPo: pubSocketPort,
     repAd: repSocketAddress,
-    repPo: repSocketPort
+    repPo: repSocketPort,
+    fileName: arg[1]
 });
 reqSocket.send(initialMsg);
 
  
 //Listening to belonging layer initial answer
 reqSocket.on('message',function(msg){
-    var response = JSON.parse(msg);
+    var response = JSON.parse(msg); 
     id = response.idServer;
     isPrimary = response.isPrimary;
-    if(response.state != undefined){
-        shop = response.state;
-    }
     if(!isPrimary){
         console.log("I am registered. I am the server "+id+"\n");
         subPrimarySocket.connect('tcp://'+response.subPriAd+":"+response.subPriPo);
         subPrimarySocket.subscribe('');
+
+        //Send request to primary to ask for state
+        var getState = {
+            kind: "getState"
+        };
+        reqSocketPrimary.connect('tcp://'+response.repPriAd+':'+response.repPriPo);
+        reqSocketPrimary.send(JSON.stringify(getState));
+
     }else{
         console.log("I am registered. I am the server "+id+". And I am the primary.\n");
         repSocket.bindSync('tcp://'+repSocketAddress+":"+repSocketPort);
     }
     subBelongingSocket.connect('tcp://'+response.subLayAd+":"+response.subLayPo);
-    subBelongingSocket.subscribe('');
+    subBelongingSocket.subscribe('');    
 });
 
 //Listening to belonging layer updates
@@ -110,34 +117,46 @@ subPrimarySocket.on('message',function(msg){
 //Listening to client requests
 repSocket.on('message',function(request){
     var msg = JSON.parse(request);
-    var prcReq = processRequest(msg);
-    if(msg.kind != 'get' && msg.kind != 'getAll' && prcReq.result=='positive'){
-        switch(msg.kind){
-            case 'buy':
-            case 'return':
-                var upRep = {
-                    kind: msg.kind,
-                    position: prcReq.position,
-                    quantity:msg.quantity
-                };
-                break;
-            case 'create':
-                var upRep = msg;
-                break;
-            case 'delete':
-                var upRep = {
-                    kind: msg.kind,
-                    position: prcReq.position
-                }
-                break;
-        }
-        pubSocket.send(JSON.stringify(upRep));
-    };
-    repSocket.send(JSON.stringify(prcReq));
+    if(msg.kind=='getState'){
+        var newState = {
+            item: shop
+        };
+        repSocket.send(JSON.stringify(newState));
+    }else{
+        var prcReq = processRequest(msg);
+        if(msg.kind != 'get' && msg.kind != 'getAll' && prcReq.result=='positive'){
+            switch(msg.kind){
+                case 'buy':
+                case 'return':
+                    var upRep = {
+                        kind: msg.kind,
+                        position: prcReq.position,
+                        quantity:msg.quantity
+                    };
+                    break;
+                case 'create':
+                    var upRep = msg;
+                    break;
+                case 'delete':
+                    var upRep = {
+                        kind: msg.kind,
+                        position: prcReq.position
+                    }
+                    break;
+            }
+            pubSocket.send(JSON.stringify(upRep));
+        };
+        repSocket.send(JSON.stringify(prcReq));
+    }
 });
 
+reqSocketPrimary.on('message',function(reply){
+    var answer = JSON.parse(reply);
+    shop = answer.item;
+});
 //Functions
 var processRequest = function(request){
+    console.log(shop);
     var response;
     var kind = request.kind;
     //console.log("<--Client "+request.clientId+" requested a "+kind+" operation");
@@ -238,6 +257,7 @@ var processRequest = function(request){
 }
 
 var processUpdate = function(update){
+    console.log(shop);
     var msg = JSON.parse(update);
     switch(msg.kind){
         case 'buy':

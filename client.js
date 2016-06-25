@@ -13,7 +13,7 @@ var shop, isReady=false, failPrimary;
 //Aux function
 listener = function(reply){
     //We got a reply.The primary is Ok
-    clearInterval(failPrimary);
+    clearTimeout(failPrimary);
     var res = JSON.parse(reply);
     console.log("-->Got answer from primary "+res.primaryId+". The request -"+res.kind+"- had a "+res.result+" result");
     if(res.result == 'negative'){
@@ -49,14 +49,12 @@ var request = {
     kind: "Consult",
     service : service
 };
-
 reqSocketDN.send(JSON.stringify(request));
-//console.log(JSON.stringify(request) +" was sent");
+
 reqSocketDN.on('message', function(reply){
     var message = JSON.parse(reply);
-    //console.log(message)
     if(message.result== "positive"){
-        clearInterval(failPrimary);
+        clearTimeout(failPrimary);
         console.log("Connected to primary "+message.item.id);
         reqSocketAddress = message.item.address;
         reqSocketPort = message.item.port;
@@ -97,6 +95,7 @@ setInterval(function(){
     }
 },2500);
 
+//Function to get a random reference number.
 var randRefNum = function(){
     return shop[aux.randInteger(shop.length-1,0)].ref_number;
 }
