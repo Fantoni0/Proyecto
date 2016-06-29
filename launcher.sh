@@ -32,7 +32,7 @@ node initiateUpdate.js Prueba server3.js 127.0.0.1 5000 &
 sleep 2
 node administrator.js Admin3 Prueba 127.0.0.1 5005 & 
 
-sleep 2
+sleep 5
 node failover.js Prueba 127.0.0.1 5000 &
 
 sleep 2

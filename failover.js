@@ -41,8 +41,6 @@ reqSocket.send(JSON.stringify(fail));
 reqSocket.on('message', function(reply){
 	if(reply == "Failover started"){
 		console.log('Failover message was received');
-	}else{
-		console.log('Incorrect server Id was provided, try again.');
 	}
 	process.exit(0);
 })

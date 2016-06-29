@@ -8,7 +8,7 @@ var reqSocket, reqSocketAddress, reqSocketPort;
 var service, fileName;
 //Verifying arguments
 var arg = process.argv;
-if (arg.length<4){
+if (arg.length<6){
     console.log("Incorrect number of arguments.Expected format:\n \
      node initiateUpdate.js <service> <fileName> <reqSocketAddress> <reqSocketPort>");
     process.exit(0);

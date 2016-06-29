@@ -11,7 +11,7 @@ var reqSocket, reqSocketAddress, reqSocketPort;
 
 //Verifying arguments
 var arg = process.argv;
-if (arg.length<4){
+if (arg.length<6){
     console.log("Incorrect number of arguments.Expected format:\n \
      node administrator.js <id> <service> <reqDomainNameAddress> <reqDomainNamePort>");
     process.exit(0);

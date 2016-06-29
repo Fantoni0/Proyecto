@@ -158,7 +158,6 @@ reqSocketPrimary.on('message',function(reply){
 
 //Functions
 var processRequest = function(request){
-    console.log(shop);
     var response;
     var kind = request.kind;
     //console.log("<--Client "+request.clientId+" requested a "+kind+" operation");
@@ -259,7 +258,6 @@ var processRequest = function(request){
 }
 
 var processUpdate = function(update){
-    console.log(shop);
     var msg = JSON.parse(update);
     switch(msg.kind){
         case 'buy':

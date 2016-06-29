@@ -5,6 +5,7 @@ var zmq = require('zmq');
 var aux = require('./auxFunctions');
 
 //Variables
+var fork = require('child_process').fork;
 var count = 1;
 var servers;
 var services = {}; //HashTable to register servers
@@ -16,11 +17,10 @@ var reqSocketDN, reqDomainNameAddress, reqDomainNamePort;
 
 //Algortihm's variables
 var numReplicas;
-var numReplicasUpdated;
+var numReplicasUpdated,numRepLaunched;
 var updatingAlgorithmRunning = false;
-var oldRepFailed, newRepFailed;
+var newRepFailed;
 var failover = false;
-var newRepRegistered;
 //Get arguments
 var arg = process.argv;
 if(arg.length<8){
@@ -50,8 +50,6 @@ repSocket.on('message',function(data){
 	switch(msg.text){
 		case "I am a new server":
 			updateServices(msg.service,msg.fileName);
-			newRepRegistered++;
-			if(newRepRegistered==numReplicas){updatingAlgorithmRunning=false;}
 			//Registering server configuration.
 			servers.push({id:count,
 						  pubAd:msg.pubAd,
@@ -86,50 +84,22 @@ repSocket.on('message',function(data){
 			repSocket.send(JSON.stringify(res));
 			break;
 		case "Force failover":
+			repSocket.send("Failover started");
 			forcePrimaryfailover(msg.service, msg.serverId);
 			break;
 		case "Start update":
+			repSocket.send("Started algortihm");
 			updatingAlgorithmRunning = true;
-			updateServices(msg.service,msg.fileName);
 			numReplicas = servers.length;
 			numReplicasUpdated = 0;
-			oldRepFailed = 0;
+			numRepLaunched = 0;
 			newRepFailed = 0;
-			var fork = require('child_process').fork;
+			failover = false;
 			var child; 
-			repSocket.send("Started algortihm");
-			child = fork(msg.fileName,[msg.service, '127.0.0.1', 6040+numReplicasUpdated, '127.0.0.1', 5000, '127.0.0.1', 6060+numReplicasUpdated]);
+			child = fork(msg.fileName,[msg.service, '127.0.0.1', 6040+numRepLaunched, '127.0.0.1', 5000, '127.0.0.1', 6060+numRepLaunched]);
 			numReplicasUpdated++;
-			while(numReplicasUpdated<numReplicas){
-				//If an old replica died, no need to shut it down
-				if(oldRepFailed<=0){
-					//Kill old replica
-					var killRep = {
-						kind: "Sepukku",
-						idServer: servers[1].id
-					}
-					pubSocket.send(JSON.stringify(killRep));
-					servers.splice(1,1); //Delete server
-				}else{oldRepFailed--;}
-				//Check if a new replica died
-
-				//Launch new replica
-				child = fork(msg.fileName,[msg.service,'127.0.0.1', 6040+numReplicasUpdated, '127.0.0.1', 5000, '127.0.0.1', 6060+numReplicasUpdated]);
-				numReplicasUpdated++;
-				//Fallo de réplica nueva
-			}
-			//Wait for new servers to register
-			while(newRepFailed>0){
-					child = fork(msg.fileName,[msg.service,'127.0.0.1', 6040+numReplicasUpdated, '127.0.0.1', 5000, '127.0.0.1', 6060+numReplicasUpdated]);
-					newRepFailed--;
-					console.log("EXTRA REP WAS LAUNCHED");
-			}
-			setTimeout(function(){
-				//Force primary to fail to select new replica
-				if(!failover){
-					forcePrimaryfailover(msg.service,0);
-				}
-			},1000);
+			numRepLaunched++;
+			launchNewReplica(msg.fileName, msg.service);
 			break;
 	}
 	
@@ -162,7 +132,6 @@ var searchServerIndex = function(id){
 };
 
 var forcePrimaryfailover = function(service,id){
-	console.log("-------------------------------Algorithm is RUNNING: "+updatingAlgorithmRunning);
 	if(servers.length<=1){
 		console.log("Just one server remaining, can't force failure");
 		return;
@@ -170,22 +139,9 @@ var forcePrimaryfailover = function(service,id){
 
 	if(id==0){
 		console.log("**Primary is dead. New election is comming**\n");
-		//If a the primary fails during the execution of the Algorithm
-
-		if(updatingAlgorithmRunning){
-			var index = searchOldReplica(service);
-			console.log("INDEX: "+index);
-			if(index!=-1){
-				//Put the old server in the first position of the array
-				var aux = servers[index];
-				servers.splice(index,1);
-				servers.unshift(aux);
-				oldRepFailed++;
-			}else{
-				failover = true
-			}
-		}
-		servers.splice(0,1); //Delete primary			
+		servers.splice(0,1); //Delete primary
+		var ind = searchOldReplica(service);
+		if(ind==-1)failover=true; // If there is no old replicas the failover already occurred
 		//Notify servers
 		var notify = {
 			kind: "newPrimary",
@@ -203,17 +159,16 @@ var forcePrimaryfailover = function(service,id){
 			port:servers[0].repPo
 		};
 		reqSocketDN.send(JSON.stringify(commMsg));
-		repSocket.send("Failover started");
 	}else{
 		var position = searchServerIndex(id);
 		if(position==-1){
-			repSocket.send("Failover failed");
+			console.log("Impossible to find the replica. Check the ID");
 		}else{
 			if(updatingAlgorithmRunning){
-				if(servers[position].version<version){
-					oldRepFailed++;
-				}else{
+				if(servers[position].version==version){
 					newRepFailed++;
+					numReplicasUpdated--;
+					console.log("NEW REP FAILED");
 				}
 			}
 			servers.splice(position,1); //Delete server
@@ -221,8 +176,7 @@ var forcePrimaryfailover = function(service,id){
 				kind: "Sepukku",
 				idServer: id
 			}
-			pubSocket.send(JSON.stringify(killRep));
-			repSocket.send("Failover started");
+			pubSocket.send(JSON.stringify(killRep));	
 		}
 	}
 };
@@ -230,26 +184,73 @@ var forcePrimaryfailover = function(service,id){
 //Search for repicas with a previous version
 var searchOldReplica = function(service){
 	var lastVersion = version;
-	for(i=0;i<servers.length;i++){
+	for(i=1;i<servers.length;i++){
 		if(servers[i].version<lastVersion){
 			return i;
 		}
 	}
+	if(servers[0].version<lastVersion){return 0;}
 	return -1;
 }
 
 //Update services
-var updateServices = function(service, version){
+var updateServices = function(service, vers){
+	//console.log("Service: "+service+". Vers: "+vers);
 	if(services[service]==undefined){
 		services[service] = [];
-		versions[[service,version]] = 1;
+		versions[[service,vers]] = 1;
 		versions[service] = 1;
 		version = versions[service];
 	}
-	if(versions[[service,version]]==undefined){
-		versions[[service,version]] = 1;
+	if(versions[[service,vers]]==undefined){
+		versions[[service,vers]] = 1;
 		version = versions[service];  
 		versions[service] = ++version;
 	}
 	servers = services[service];
 }
+
+//Launch new replica
+var launchNewReplica = function(fileName, service){
+	//console.log("FN: "+fileName+". Service: "+service);
+	if(numReplicasUpdated<numReplicas){
+		child = fork(fileName,[service,'127.0.0.1', 6040+numRepLaunched, '127.0.0.1', 5000, '127.0.0.1', 6060+numRepLaunched]);
+		numReplicasUpdated++;
+		numRepLaunched++;
+	}
+	var auxKill = function(){
+		killOldReplica(fileName,service);
+	}
+	setTimeout(auxKill,500);
+}
+
+//Ki ll old replica
+var killOldReplica = function(fileName,service){
+	var ind = searchOldReplica(service);
+	var auxLaunch = function(){
+		launchNewReplica(fileName,service);
+	}
+	if(ind > 0){
+		var killRep = {
+			kind: "Sepukku",
+			idServer: servers[ind].id
+		}
+		pubSocket.send(JSON.stringify(killRep));
+		servers.splice(ind,1); //Delete server
+	}
+	while(newRepFailed>0){
+		child = fork(fileName,[service,'127.0.0.1', 6040+numRepLaunched, '127.0.0.1', 5000, '127.0.0.1', 6060+numRepLaunched]);
+		numRepLaunched++;
+		numReplicasUpdated++;
+		newRepFailed--;
+	}
+	if(numReplicasUpdated<numReplicas){
+		setTimeout(auxLaunch,500);
+	}else{
+		if(!failover){
+			forcePrimaryfailover(service,0);
+		}
+		updatingAlgorithmRunning = false;
+	}
+}
+
