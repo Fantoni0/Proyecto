@@ -1,7 +1,7 @@
 #Bacherlor's Degree Final Work
 
 ##What is this?
-A repository where I will upload the code of my BDFW (Bacherlor's Degree Final Work). 
+A repository where I will upload the code of my BDFW ((Bacherlor's Degree Final Work). 
 My BDFW is about updating distributed services based on passive model replication, also known as the primary-backup approach.
 
 As part of my work I am developing a demo to show my updating algorithm in action. It's a simple one with basic client/server interaction. Some premises are supossed to facilitate the development of the distributed system. The reason is that the goal of my BDFW is not to develop a completely real primary-backup service. My goal is to develop an effective way to update those systems without interrupting the service.
