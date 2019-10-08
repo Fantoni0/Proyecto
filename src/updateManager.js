@@ -61,7 +61,7 @@ repSocket.on('message',function(data){
 			//Crafting response
 			var res = {
 				idServer: count,
-				isPrimary: servers.length==1,
+				isPrimary: servers.length === 1,
 				subPriAd: servers[0].pubAd,
 				subPriPo: servers[0].pubPo,
 				repPriAd: servers[0].repAd,
@@ -69,7 +69,7 @@ repSocket.on('message',function(data){
 				subLayAd: pubSocketAddress,
 				subLayPo: pubSocketPort                                 
 			};
-			if(res.isPrimary==true){
+			if(res.isPrimary === true){
 				//Communicate DNS new primary's address
 				var commMsg = {
 					kind : "Register",
@@ -108,7 +108,7 @@ repSocket.on('message',function(data){
 //Getting domain reply
 reqSocketDN.on('message',function(reply){
 	var answer = JSON.parse(reply);
-	if(answer.result=='positive'){console.log("Primary was registered");}
+	if(answer.result === 'positive'){console.log("Primary was registered");}
 	else{
 		//If we got a negative response we must ask again
 		var retry = {
@@ -126,7 +126,7 @@ reqSocketDN.on('message',function(reply){
 //Functions
 var searchServerIndex = function(id){
 	for(i = 0;i<servers.length;i++){
-		if(servers[i].id==id)return i;
+		if(servers[i].id === id)return i;
 	}
 	return -1;
 };
@@ -137,11 +137,11 @@ var forcePrimaryfailover = function(service,id){
 		return;
 	}
 
-	if(id==0){
+	if(id === 0){
 		console.log("**Primary is dead. New election is comming**\n");
 		servers.splice(0,1); //Delete primary
 		var ind = searchOldReplica(service);
-		if(ind==-1)failover=true; // If there is no old replicas the failover already occurred
+		if(ind === -1)failover=true; // If there is no old replicas the failover already occurred
 		//Notify servers
 		var notify = {
 			kind: "newPrimary",
@@ -161,11 +161,11 @@ var forcePrimaryfailover = function(service,id){
 		reqSocketDN.send(JSON.stringify(commMsg));
 	}else{
 		var position = searchServerIndex(id);
-		if(position==-1){
+		if(position === -1){
 			console.log("Impossible to find the replica. Check the ID");
 		}else{
 			if(updatingAlgorithmRunning){
-				if(servers[position].version==version){
+				if(servers[position].version === version){
 					newRepFailed++;
 					numReplicasUpdated--;
 					console.log("NEW REP FAILED");
@@ -196,13 +196,13 @@ var searchOldReplica = function(service){
 //Update services
 var updateServices = function(service, vers){
 	//console.log("Service: "+service+". Vers: "+vers);
-	if(services[service]==undefined){
+	if(services[service] === undefined){
 		services[service] = [];
 		versions[[service,vers]] = 1;
 		versions[service] = 1;
 		version = versions[service];
 	}
-	if(versions[[service,vers]]==undefined){
+	if(versions[[service,vers]] === sundefined){
 		versions[[service,vers]] = 1;
 		version = versions[service];  
 		versions[service] = ++version;

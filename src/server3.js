@@ -87,10 +87,10 @@ reqSocket.on('message',function(msg){
 subBelongingSocket.on('message',function(msg){
     //If a message is received the primary is down and a reconfiguration is needed.
     var update = JSON.parse(msg);
-    if(update.kind=='newPrimary'){
-        if(isPrimary && update.idPrimary!=id)process.exit(0);
+    if(update.kind === 'newPrimary'){
+        if(isPrimary && update.idPrimary !== id)process.exit(0);
         console.log("I am the server "+id+ ". The new primary is "+update.idPrimary);
-        if(update.idPrimary==id){
+        if(update.idPrimary === id){
             isPrimary = true;
             repSocket.bindSync('tcp://'+repSocketAddress+":"+repSocketPort);
             subPrimarySocket.close();
@@ -100,8 +100,8 @@ subBelongingSocket.on('message',function(msg){
             subPrimarySocket.connect('tcp://'+update.subPriAd+":"+update.subPriPo );
             subPrimarySocket.subscribe('');
         }
-    }else if(update.kind=='Sepukku'){
-        if(id==update.idServer){ 
+    }else if(update.kind === 'Sepukku'){
+        if(id === update.idServer){
             console.log("Server "+id+" has been shut down.");
             process.exit(0);
         }
@@ -117,14 +117,14 @@ subPrimarySocket.on('message',function(msg){
 //Listening to client requests
 repSocket.on('message',function(request){
     var msg = JSON.parse(request);
-    if(msg.kind=='getState'){
+    if(msg.kind === 'getState'){
         var newState = {
             item: shop
         };
         repSocket.send(JSON.stringify(newState));
     }else{
         var prcReq = processRequest(msg);
-        if(msg.kind != 'get' && msg.kind != 'getAll' && prcReq.result=='positive'){
+        if(msg.kind !== 'get' && msg.kind !== 'getAll' && prcReq.result === 'positive'){
             switch(msg.kind){
                 case 'buy':
                 case 'return':
@@ -181,7 +181,7 @@ var processRequest = function(request){
             break;
         case 'buy':
             var index = searchItem(request.ref_number);
-            if(index==-1){
+            if(index === -1){
                 response = {
                     primaryId : id,
                     kind: kind,
@@ -209,7 +209,7 @@ var processRequest = function(request){
             break;
         case 'return':
             var index = searchItem(request.ref_number);
-            if(index==-1){
+            if(index === -1){
                 response = {
                     primaryId : id,
                     kind: kind,
@@ -236,7 +236,7 @@ var processRequest = function(request){
             break;
         case 'delete':
             var index = searchItem(request.ref_number);
-            if(index==-1){
+            if(index === -1){
                 response = {
                         primaryId : id,
                         kind: kind,
@@ -277,7 +277,7 @@ var processUpdate = function(update){
 
 var searchItem = function(refNum){
     for(var i=0;i<shop.length;i++){
-        if(shop[i].ref_number==refNum)return i;
+        if(shop[i].ref_number === refNum)return i;
     }
     return -1;
 }

@@ -1,6 +1,17 @@
-#Bachelor's Degree Final Work
-
-##What is this?
+# Bachelor's Degree Final Work
+ 
+## Disclaimer :warning:
+ 10/2019 :construction: - I wrote this code in 2016, before ECMAScript 2016 and even ES6 wasn't fully implanted. This, and the fact that I was a student with little experience outside the academic world... resulted in low quality code.
+ I am leaving the repository for documental reasons, but the code should not be considered in high regard (or any regard :crying_cat_face:).
+ I do not intend to update the code. 
+ 
+ These are some of the key modifications, among the thousands it needs, that I think the code needs to be up to date:
+ 
+ - [ ] Transition from js entities to js classes.
+ - [ ] Proper documentation.
+ - [ ] Update to new ES standards (e.g: use of let, const etc.)
+ - [ ] Update some of the callbacks to promises.
+## What is this?
 A repository where I will upload the code of my BDFW (Bachelor's Degree Final Work). 
 My BDFW is about updating distributed services based on passive model replication, also known as the primary-backup approach.
 
@@ -8,7 +19,7 @@ As part of my work I am developing a demo to show my updating algorithm in actio
 
 The service emulates a simple distributed shop which accepts client's requests.
 
-##Files
+## Files
 
 - auxfunctions.js: Auxiliar functions library.
 
